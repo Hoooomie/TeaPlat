@@ -50,6 +50,38 @@ function orderText(order: Order) {
 【对老师要求】：${order.requirement}`;
 }
 
+function copyTextFallback(text: string) {
+  const textArea = document.createElement('textarea');
+  const activeElement = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+
+  textArea.value = text;
+  textArea.readOnly = true;
+  textArea.setAttribute('aria-hidden', 'true');
+  textArea.style.position = 'fixed';
+  textArea.style.inset = '0 auto auto 0';
+  textArea.style.width = '1px';
+  textArea.style.height = '1px';
+  textArea.style.padding = '0';
+  textArea.style.border = '0';
+  textArea.style.opacity = '0';
+  textArea.style.fontSize = '16px';
+  textArea.style.pointerEvents = 'none';
+  document.body.appendChild(textArea);
+
+  try {
+    textArea.focus({ preventScroll: true });
+    textArea.select();
+    textArea.setSelectionRange(0, text.length);
+    // oxlint-disable-next-line typescript/no-deprecated -- Required as an HTTP-only clipboard fallback.
+    return document.execCommand('copy');
+  } catch {
+    return false;
+  } finally {
+    textArea.remove();
+    activeElement?.focus({ preventScroll: true });
+  }
+}
+
 function MultiSelectFilter({ label, icon, options, values, onChange }: {
   label: string;
   icon: ReactNode;
@@ -123,10 +155,33 @@ export default function Home() {
     setCurrentPage(Math.min(Math.max(page, 1), totalPages));
     window.requestAnimationFrame(() => document.getElementById('order-list-title')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
   };
-  const copyOrder = async (order: Order) => {
-    await navigator.clipboard.writeText(orderText(order));
-    setCopiedOrder(order.id);
-    window.setTimeout(() => setCopiedOrder((current) => current === order.id ? null : current), 1600);
+  const showCopied = (orderId: number) => {
+    setCopiedOrder(orderId);
+    window.setTimeout(() => setCopiedOrder((current) => current === orderId ? null : current), 1600);
+  };
+  const copyOrder = (order: Order) => {
+    const text = orderText(order);
+
+    // Async Clipboard is restricted to HTTPS/localhost. NATAPP's free HTTP
+    // address therefore needs the synchronous selection-based fallback.
+    if (!window.isSecureContext || !navigator.clipboard?.writeText) {
+      if (copyTextFallback(text)) {
+        showCopied(order.id);
+      } else {
+        window.prompt('自动复制受浏览器限制，请长按下方内容复制：', text);
+      }
+      return;
+    }
+
+    void navigator.clipboard.writeText(text)
+      .then(() => showCopied(order.id))
+      .catch(() => {
+        if (copyTextFallback(text)) {
+          showCopied(order.id);
+        } else {
+          window.prompt('自动复制受浏览器限制，请长按下方内容复制：', text);
+        }
+      });
   };
 
   return (
@@ -177,7 +232,7 @@ export default function Home() {
           {pageOrders.map((order) => <article className="order-card" key={order.id}>
             <div className="card-topline">
               <h3 className="order-number">{order.code}号家教</h3>
-              <button type="button" className={`copy-button ${copiedOrder === order.id ? 'is-copied' : ''}`} aria-label={`复制${order.code}号家教全部信息`} onClick={() => void copyOrder(order)}>
+              <button type="button" className={`copy-button ${copiedOrder === order.id ? 'is-copied' : ''}`} aria-label={`复制${order.code}号家教全部信息`} onClick={() => copyOrder(order)}>
                 {copiedOrder === order.id ? <Check /> : <Copy />}
                 <span>{copiedOrder === order.id ? '已复制' : '复制'}</span>
               </button>
