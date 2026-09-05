@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState, type ReactNode } from 'react';
-import { BookOpen, Check, ChevronDown, Copy, Info, MapPin, Search, SlidersHorizontal, Sparkles } from 'lucide-react';
+import { BookOpen, Check, ChevronDown, Coins, Copy, Info, MapPin, Search, SlidersHorizontal, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuGroup, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
@@ -11,6 +11,7 @@ const PAGE_SIZE = 15;
 
 const gradeOptions = ['小学', '初一', '初二', '初三', '高一', '高二', '高三', '大学', '其他'];
 const subjectOptions = ['语文', '数学', '英语', '历史', '物理', '政治', '地理', '化学', '生物', '其他'];
+const amountCategoryOptions = ['高价单', '低价单', '返额单'];
 const districtOptions = [
   '东城区',
   '西城区',
@@ -39,6 +40,17 @@ function gradeCategory(grade: string) {
 }
 
 function orderText(order: Order) {
+  if (order.isRebate) {
+    return `有返额:
+【年级科目】${order.gradeSubject}
+【辅导地点】${order.district === '其他' ? order.area : `${order.district}${order.area}`}
+【辅导方式】${order.mode}
+【课费报酬】${order.price}
+【时间次数】${order.schedule}
+【学员情况】${order.score}
+【其他要求】${order.requirement}`;
+  }
+
   return `${order.code}号家教
 【学生性别】：${order.gender}
 【学生年级】：${order.grade}
@@ -129,6 +141,7 @@ export default function Home() {
   const [grades, setGrades] = useState<string[]>([]);
   const [subjects, setSubjects] = useState<string[]>([]);
   const [districts, setDistricts] = useState<string[]>([]);
+  const [amountCategories, setAmountCategories] = useState<string[]>([]);
   const [query, setQuery] = useState('');
   const [copiedOrder, setCopiedOrder] = useState<number | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -136,13 +149,14 @@ export default function Home() {
   const filteredOrders = useMemo(() => {
     const keyword = query.trim().toLowerCase();
     return orders.filter((order) => {
-      const haystack = `${order.code}${order.district}${order.area}${order.grade}${order.subject}${order.gender}${order.score}${order.requirement}`.toLowerCase();
+      const haystack = `${order.code}${order.amountCategory}${order.district}${order.area}${order.gradeSubject}${order.grade}${order.subject}${order.mode}${order.gender}${order.score}${order.requirement}`.toLowerCase();
       return (grades.length === 0 || grades.includes(gradeCategory(order.grade)))
         && (subjects.length === 0 || subjects.includes(subjectOptions.includes(order.subject) ? order.subject : '其他'))
         && (districts.length === 0 || districts.includes(districtOptions.includes(order.district) ? order.district : '其他'))
+        && (amountCategories.length === 0 || amountCategories.includes(order.amountCategory))
         && (!keyword || haystack.includes(keyword));
     });
-  }, [districts, grades, query, subjects]);
+  }, [amountCategories, districts, grades, query, subjects]);
 
   const totalPages = Math.max(1, Math.ceil(filteredOrders.length / PAGE_SIZE));
   const pageOrders = filteredOrders.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
@@ -150,7 +164,7 @@ export default function Home() {
   const priceRange = priceNumbers.length
     ? `￥${Math.min(...priceNumbers)} - ￥${Math.max(...priceNumbers)}`
     : '待更新';
-  const resetFilters = () => { setGrades([]); setSubjects([]); setDistricts([]); setQuery(''); setCurrentPage(1); };
+  const resetFilters = () => { setGrades([]); setSubjects([]); setDistricts([]); setAmountCategories([]); setQuery(''); setCurrentPage(1); };
   const changePage = (page: number) => {
     setCurrentPage(Math.min(Math.max(page, 1), totalPages));
     window.requestAnimationFrame(() => document.getElementById('order-list-title')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
@@ -198,7 +212,7 @@ export default function Home() {
         <div>
           <p className="eyebrow">北京地区 · 家教订单实时更新</p>
           <h1 id="page-title">找到合适的一课，及时接单。</h1>
-          <p className="intro-copy">按年级、科目和区域筛选，快速判断时间与报酬是否合适。</p>
+          <p className="intro-copy">按年级、科目、区域和单额筛选，快速判断时间与报酬是否合适。</p>
         </div>
         <div className="quick-stats" aria-label="订单概况">
           <div><strong>{orders.length}</strong><span>开放订单</span></div>
@@ -217,6 +231,7 @@ export default function Home() {
           <MultiSelectFilter label="年级" icon={<BookOpen />} options={gradeOptions} values={grades} onChange={(values) => { setGrades(values); setCurrentPage(1); }} />
           <MultiSelectFilter label="科目" icon={<Sparkles />} options={subjectOptions} values={subjects} onChange={(values) => { setSubjects(values); setCurrentPage(1); }} />
           <MultiSelectFilter label="区域" icon={<MapPin />} options={districtOptions} values={districts} onChange={(values) => { setDistricts(values); setCurrentPage(1); }} />
+          <MultiSelectFilter label="单额" icon={<Coins />} options={amountCategoryOptions} values={amountCategories} onChange={(values) => { setAmountCategories(values); setCurrentPage(1); }} />
         </div>
       </section>
 
@@ -231,13 +246,21 @@ export default function Home() {
         {filteredOrders.length ? <div className="order-grid">
           {pageOrders.map((order) => <article className="order-card" key={order.id}>
             <div className="card-topline">
-              <h3 className="order-number">{order.code}号家教</h3>
-              <button type="button" className={`copy-button ${copiedOrder === order.id ? 'is-copied' : ''}`} aria-label={`复制${order.code}号家教全部信息`} onClick={() => copyOrder(order)}>
+              <h3 className="order-number">{order.isRebate ? '有返额' : `${order.code}号家教`}</h3>
+              <button type="button" className={`copy-button ${copiedOrder === order.id ? 'is-copied' : ''}`} aria-label={`复制${order.isRebate ? '返额单' : `${order.code}号家教`}全部信息`} onClick={() => copyOrder(order)}>
                 {copiedOrder === order.id ? <Check /> : <Copy />}
                 <span>{copiedOrder === order.id ? '已复制' : '复制'}</span>
               </button>
             </div>
-            <div className="order-copy-block">
+            {order.isRebate ? <div className="order-copy-block">
+              <p><strong>【年级科目】：</strong>{order.gradeSubject}</p>
+              <p className="address-line"><strong>【辅导地点】：</strong>{order.district === '其他' ? order.area : `${order.district}${order.area}`}</p>
+              <p><strong>【辅导方式】：</strong>{order.mode}</p>
+              <p><strong>【课费报酬】：</strong><em>{order.price}</em></p>
+              <p><strong>【时间次数】：</strong>{order.schedule}</p>
+              <p><strong>【学员情况】：</strong>{order.score}</p>
+              <p className="teacher-requirement"><strong>【其他要求】：</strong>{order.requirement}</p>
+            </div> : <div className="order-copy-block">
               <p><strong>【学生性别】：</strong>{order.gender}</p>
               <p><strong>【学生年级】：</strong>{order.grade}</p>
               <p><strong>【补习科目】：</strong>{order.subject}</p>
@@ -246,8 +269,8 @@ export default function Home() {
               <p><strong>【报价】：</strong><em>{order.price}</em></p>
               <p className="address-line"><strong>【地址】：</strong>{order.district === '其他' ? order.area : `${order.district}${order.area}`}</p>
               <p className="teacher-requirement"><strong>【对老师要求】：</strong>{order.requirement}</p>
-            </div>
-            <div className="card-meta"><span>信息已核验</span></div>
+            </div>}
+            <div className="card-meta"><span className="amount-category" data-category={order.amountCategory}>{order.amountCategory}</span><span>信息已核验</span></div>
           </article>)}
         </div> : <div className="empty-state"><SlidersHorizontal /><h3>{orders.length ? '没有符合条件的订单' : '订单正在更新'}</h3><p>{orders.length ? '换一组筛选条件，或者查看全部订单。' : '暂时还没有可展示的家教订单，请稍后再来查看。'}</p>{orders.length > 0 && <Button type="button" onClick={resetFilters}>重置筛选</Button>}</div>}
 
