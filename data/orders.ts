@@ -1,6 +1,6 @@
 import rawOrders from './orders.txt?raw';
 
-export type OrderAmountCategory = '高价单' | '低价单' | '返额单';
+export type OrderAmountCategory = '高价单' | '普通单' | '返额单';
 
 export type Order = {
   id: number;
@@ -111,7 +111,7 @@ function splitGradeSubject(value: string) {
 
 function amountCategoryFromPrice(price: string): OrderAmountCategory {
   const hourlyRate = Number(price.match(/\d+(?:\.\d+)?/)?.[0]);
-  return Number.isFinite(hourlyRate) && hourlyRate >= 200 ? '高价单' : '低价单';
+  return Number.isFinite(hourlyRate) && hourlyRate >= 200 ? '高价单' : '普通单';
 }
 
 export function parseOrders(source: string): Order[] {

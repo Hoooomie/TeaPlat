@@ -11,7 +11,7 @@ const PAGE_SIZE = 15;
 
 const gradeOptions = ['小学', '初一', '初二', '初三', '高一', '高二', '高三', '大学', '其他'];
 const subjectOptions = ['语文', '数学', '英语', '历史', '物理', '政治', '地理', '化学', '生物', '其他'];
-const amountCategoryOptions = ['高价单', '低价单', '返额单'];
+const amountCategoryOptions = ['高价单', '普通单', '返额单'];
 const districtOptions = [
   '东城区',
   '西城区',

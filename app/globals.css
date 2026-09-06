@@ -276,7 +276,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .card-meta span:last-child { color: #168875; }
 .amount-category { padding: 4px 8px; border-radius: 999px; font-weight: 700; }
 .amount-category[data-category="高价单"] { color: #a34d12; background: #fff2df; }
-.amount-category[data-category="低价单"] { color: #3265a8; background: #eaf2ff; }
+.amount-category[data-category="普通单"] { color: #3265a8; background: #eaf2ff; }
 .amount-category[data-category="返额单"] { color: #8b3daa; background: #f7eaff; }
 .order-pagination { margin-top: 34px; }
 .order-pagination [data-slot="pagination-content"] { gap: 5px; padding: 7px; border: 1px solid rgba(255,255,255,.82); border-radius: 15px; background: rgba(255,255,255,.58); backdrop-filter: blur(18px); box-shadow: 0 10px 30px rgba(39,57,101,.08); }
