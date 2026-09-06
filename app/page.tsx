@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuGroup, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
 import { orders, type Order } from '@/data/orders';
+import { hourlyRatesFromPrice } from '@/data/price';
 
 const PAGE_SIZE = 15;
 
@@ -160,9 +161,10 @@ export default function Home() {
 
   const totalPages = Math.max(1, Math.ceil(filteredOrders.length / PAGE_SIZE));
   const pageOrders = filteredOrders.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
-  const priceNumbers = orders.flatMap((order) => order.price.match(/\d+(?:\.\d+)?/g)?.map(Number) ?? []);
+  const priceNumbers = orders.flatMap((order) => hourlyRatesFromPrice(order.price));
+  const formatPrice = (price: number) => Number.isInteger(price) ? String(price) : price.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
   const priceRange = priceNumbers.length
-    ? `￥${Math.min(...priceNumbers)} - ￥${Math.max(...priceNumbers)}`
+    ? `￥${formatPrice(Math.min(...priceNumbers))} - ￥${formatPrice(Math.max(...priceNumbers))}`
     : '待更新';
   const resetFilters = () => { setGrades([]); setSubjects([]); setDistricts([]); setAmountCategories([]); setQuery(''); setCurrentPage(1); };
   const changePage = (page: number) => {

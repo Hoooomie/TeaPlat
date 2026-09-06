@@ -1,4 +1,6 @@
 import rawOrders from './orders.txt?raw';
+import { beijingDistrictFromText, stripBeijingDistrictPrefix } from './location';
+import { hourlyRatesFromPrice } from './price';
 
 export type OrderAmountCategory = '高价单' | '普通单' | '返额单';
 
@@ -19,12 +21,6 @@ export type Order = {
   price: string;
   requirement: string;
 };
-
-const beijingDistricts = [
-  '东城区', '西城区', '朝阳区', '丰台区', '石景山区', '海淀区',
-  '门头沟区', '房山区', '通州区', '顺义区', '昌平区', '大兴区',
-  '怀柔区', '平谷区', '密云区', '延庆区',
-] as const;
 
 const orderHeadingPattern = /^(\d{4,})\s*号?\s*家教/;
 const rebateHeadingPattern = /^有返额\s*[：:]?\s*$/;
@@ -93,11 +89,13 @@ function resolveAddress(fields: Map<string, string>) {
   const address = firstField(fields, '地址', '家教地址', '授课地址', '辅导地点') || '地址待确认';
   const selectedDistrict = firstField(fields, '区域', '地区');
   const mode = firstField(fields, '辅导方式', '授课方式');
-  const district = beijingDistricts.find((item) => selectedDistrict.includes(item) || address.includes(item))
+  const district = beijingDistrictFromText(selectedDistrict, address)
     ?? (/线上|网课|网络授课|远程|腾讯会议/.test(`${selectedDistrict}${address}${mode}`) ? '线上' : '其他');
   const area = district === '其他'
     ? address
-    : address.replace(new RegExp(`^${district}`), '').trim() || (district === '线上' ? '线上授课' : '地址待确认');
+    : district === '线上'
+      ? '线上授课'
+      : stripBeijingDistrictPrefix(address, district) || '地址待确认';
 
   return { district, area };
 }
@@ -110,8 +108,7 @@ function splitGradeSubject(value: string) {
 }
 
 function amountCategoryFromPrice(price: string): OrderAmountCategory {
-  const hourlyRate = Number(price.match(/\d+(?:\.\d+)?/)?.[0]);
-  return Number.isFinite(hourlyRate) && hourlyRate >= 200 ? '高价单' : '普通单';
+  return hourlyRatesFromPrice(price).some((hourlyRate) => hourlyRate >= 200) ? '高价单' : '普通单';
 }
 
 export function parseOrders(source: string): Order[] {
