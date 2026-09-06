@@ -33,6 +33,12 @@ yarn-error.log*
 .vercel
 next-env.d.ts
 /dist/
+/dist.incomplete-*/
 /.wrangler/
 /outputs/
 /work/
+/build.log
+
+# Server-managed order data and transfer bundles
+/data/orders.txt
+/*.bundle
